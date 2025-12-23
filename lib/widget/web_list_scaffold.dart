@@ -7,8 +7,12 @@
 // - 수정4차: 가로 스크롤 기본 지원
 // - 수정5차(누적): 삭제 버튼 "항상 표시" (onDeleteTap==null이면 비활성)
 //               '전체' 텍스트는 옵션(기본 숨김)으로 변경 (원 UI 훼손 방지)
+// - 수정6차(누적):
+//   1) 반응형 폭 확장: 화면 가로가 커지면 리스트(테이블)도 같이 넓어지게 처리
+//   2) 가로 스크롤은 유지(테이블이 더 넓을 때만 스크롤 발생)
 // ===================================================================
 
+import 'dart:math' as math; // ✅ 수정6차: width 계산용
 import 'package:flutter/material.dart';
 import 'package:hoho/widget/web_common_button.dart';
 
@@ -115,15 +119,24 @@ class WebListScaffold extends StatelessWidget {
         const Divider(height: 1),
 
         // ============================================================
-        // 가로 스크롤 기본 지원
+        // 수정6차: 반응형 폭 확장 + 가로 스크롤 유지
+        // - availableWidth(현재 화면 폭)를 기준으로
+        //   minWidth = max(1200, availableWidth) 로 강제
         // ============================================================
         Expanded(
-          child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(minWidth: 1200),
-              child: childTable,
-            ),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final availableWidth = constraints.maxWidth;
+              final targetMinWidth = math.max(1200.0, availableWidth);
+
+              return SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(minWidth: targetMinWidth),
+                  child: childTable,
+                ),
+              );
+            },
           ),
         ),
       ],
