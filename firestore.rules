@@ -1,0 +1,56 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // 🔐 요금 없이 관리자 판별 (config/admins 문서 존재 여부)
+    function isAdmin() {
+      return isSignedIn()
+        && exists(/databases/$(database)/documents/config/main/admins/$(request.auth.uid));
+    }
+
+    // 접수
+    match /receptions/{docId} {
+      allow read, create, update, delete: if isSignedIn();
+    }
+
+    // 상담
+    match /consultations/{doc} {
+      allow read, write: if isSignedIn();
+    }
+
+    // 사용자
+    match /users/{uid} {
+      // 관리자: 전체 조회(리스트 포함)
+      allow read: if isAdmin();
+
+      // 일반 사용자: 본인 문서 단건 조회
+      allow get: if isSignedIn() && request.auth.uid == uid;
+
+      // 생성: 본인 문서만
+      allow create: if isSignedIn() && request.auth.uid == uid;
+
+      // 수정: 관리자 또는 본인
+      allow update: if isAdmin() || (isSignedIn() && request.auth.uid == uid);
+
+      // 삭제: 관리자만
+      allow delete: if isAdmin();
+    }
+
+    // 관리자 설정 문서
+    match /config/{docId} {
+      allow read, write: if isAdmin();
+      match /admins/{adminUid} {
+        allow read, write: if isAdmin();
+      }
+    }
+
+    // 기본 거부
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -1,0 +1,33 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>Kakao Postcode Popup</title>
+  <script src="//t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js"></script>
+  <style>
+    html,body{margin:0;padding:0;height:100%}
+    #wrap{height:100%}
+  </style>
+</head>
+<body>
+<div id="wrap"></div>
+<script>
+  new daum.Postcode({
+    oncomplete: function(data) {
+      var address  = data.roadAddress || data.address || '';
+      var building = data.buildingName || '';
+      var payload = JSON.stringify({
+        type: 'kakao-postcode-result',
+        address: address,
+        buildingName: data.buildingName || ''
+      });
+
+      var target = window.opener || parent;
+      try { target.postMessage(payload, '*'); } catch (e) {}
+      try { window.close(); } catch (e) {}
+    }
+  }).embed(document.getElementById('wrap'), { autoClose: true });
+</script>
+</body>
+</html>

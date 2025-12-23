@@ -1,0 +1,45 @@
+# ============================================================
+# hoho - Flutter Web + Firebase
+# Android Studio only / Windows
+# 기준PC: 집PC
+# ============================================================
+
+# --------------------
+# Flutter / Dart
+# --------------------
+.dart_tool/
+.packages
+.pub/
+.flutter-plugins
+.flutter-plugins-dependencies
+build/
+
+# --------------------
+# IDE (Android Studio)
+# --------------------
+.idea/
+*.iml
+
+# --------------------
+# Android (PC별 환경 파일 제외)
+# --------------------
+android/.gradle/
+android/local.properties
+android/app/debug/
+android/app/profile/
+android/app/release/
+
+# --------------------
+# iOS (사용 안 해도 무방)
+# --------------------
+ios/Pods/
+ios/.symlinks/
+ios/Flutter/Flutter.framework
+ios/Flutter/Flutter.podspec
+ios/Flutter/Generated.xcconfig
+
+# --------------------
+# OS / Misc
+# --------------------
+*.log
+.DS_Store

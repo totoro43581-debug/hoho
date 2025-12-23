@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="https://t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js"></script>
+  <script>
+    window.onload = function() {
+      new daum.Postcode({
+        oncomplete: function(data) {
+          var result = {
+            address: data.roadAddress,
+            buildingName: data.buildingName || ''
+          };
+          // ✅ Flutter로 결과 전달
+          if (window.flutter_inappwebview) {
+            window.flutter_inappwebview.callHandler('onComplete', JSON.stringify(result));
+          } else {
+            // ✅ webview_flutter 대응
+            onComplete.postMessage(JSON.stringify(result));
+          }
+        }
+      }).open();
+    };
+  </script>
+</head>
+<body></body>
+</html>
