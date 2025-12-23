@@ -33,6 +33,9 @@ import 'package:hoho/screen/setting/user_edit_screen_web.dart';
 // 삭제 + 휴지통
 import 'package:hoho/screen/common/recycle_bin_screen_web.dart';
 
+// 통합일정
+import 'package:hoho/screen/schedule/schedule_screen_web.dart';
+
 class HomeScreenWeb extends StatefulWidget {
   const HomeScreenWeb({super.key});
 
