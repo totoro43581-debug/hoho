@@ -1,29 +1,7 @@
-// lib/screen/setting/user_edit_screen_web.dart
-// ===================================================================
-// 사용자 편집 (Web)
-// - (기존 주석 블록이 있다면 삭제하지 말고 "위에 그대로 두고",
-//   아래 코드(=import부터 파일 끝까지)로 교체하세요.)
-//
-// - 수정1차(누적):
-//   1) 버튼 UI 통일: 회색 바탕 + 보라색 글자/테두리(접수/상담 리스트 톤)
-//
-// - 수정2차(누적):
-//   1) "정렬/레이아웃 변경 금지" 원칙 준수: 기존 배치 그대로 유지
-//   2) 매니저색상 선택: 브라우저 기본 컬러피커(input type="color")로 변경
-//      - 텍스트 입력 유지
-//      - 입력칸 오른쪽 색상칩(■) 클릭 시 컬러피커 열림
-//
-// - 수정3차(누적):
-//   1) Blaze 없이 진행: "관리자 비밀번호 직접 변경" 제거
-//   2) 대신 "비밀번호 재설정 메일 보내기"로 전환 (직원이 본인 메일로 변경)
-// ===================================================================
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'dart:html' as html; // ✅ 수정2차: Web 기본 컬러피커 사용
-import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:hoho/widget/web_common_dialog.dart';
-import 'package:firebase_auth/firebase_auth.dart'; // ✅ 수정3차: reset email 발송용
+import 'package:firebase_auth/firebase_auth.dart'; // ✅ 비밀번호 재설정 메일 발송용
 
 class UserEditScreenWeb extends StatefulWidget {
   final String userId;
@@ -45,10 +23,6 @@ class _UserEditScreenWebState extends State<UserEditScreenWeb> {
   final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _managerColorController = TextEditingController();
 
-  // (기존에 있던 비밀번호 입력칸 컨트롤러는 유지하되, Blaze 없이 직접 변경은 하지 않음)
-  final TextEditingController _newPasswordController = TextEditingController();
-  final TextEditingController _newPasswordConfirmController = TextEditingController();
-
   bool _isActive = true;
 
   // 라디오 그룹(기존 화면 유지)
@@ -60,6 +34,9 @@ class _UserEditScreenWebState extends State<UserEditScreenWeb> {
   String _workLogType = '지원팀'; // 업무일지
 
   bool _loading = true;
+
+  // ✅ 수정4차: 관리자 여부(현재 로그인 사용자 기준)
+  bool _isAdmin = false;
 
   // ===========================
   // 수정1차: 버튼 스타일(회색 + 보라)
@@ -101,9 +78,26 @@ class _UserEditScreenWebState extends State<UserEditScreenWeb> {
     return '#${v.toUpperCase()}';
   }
 
+  // ✅ 수정4차: 관리자 role 판별(현재 로그인 사용자 문서 기준)
+  bool _isAdminRole(String role) {
+    return role == '최고관리자' || role == '부관리자';
+  }
+
   Future<void> _load() async {
     setState(() => _loading = true);
     try {
+      // ✅ 수정4차: 현재 로그인 사용자 role 조회 → 관리자 여부 결정
+      final current = FirebaseAuth.instance.currentUser;
+      if (current != null) {
+        final meSnap =
+        await FirebaseFirestore.instance.collection('users').doc(current.uid).get();
+        final me = meSnap.data() ?? {};
+        final myRole = (me['role'] ?? me['accountStatus'] ?? '').toString();
+        _isAdmin = _isAdminRole(myRole);
+      } else {
+        _isAdmin = false;
+      }
+
       final snap = await FirebaseFirestore.instance.collection('users').doc(widget.userId).get();
       final data = snap.data() ?? {};
 
@@ -135,16 +129,13 @@ class _UserEditScreenWebState extends State<UserEditScreenWeb> {
       'name': _nameController.text.trim(),
       'phone': _phoneController.text.trim(),
       'managerColor': managerColor,
-
       'isActive': _isActive,
-
       'role': _accountStatus,
       'branchAuth': _branchAuth,
       'spaceAuth': _spaceAuth,
       'team': _team,
       'workType': _workType,
       'workLogType': _workLogType,
-
       'updatedAt': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
 
@@ -156,11 +147,15 @@ class _UserEditScreenWebState extends State<UserEditScreenWeb> {
   }
 
   // ============================================================
-  // ✅ 수정3차: 비밀번호 재설정 메일 보내기 (Blaze 없이)
-  // - 해당 이메일로 reset link 발송
-  // - 직원이 본인 이메일에서 링크 열어 새 비밀번호 설정
+  // ✅ 수정3차(유지): 비밀번호 재설정 메일 보내기 (Blaze 없이)
+  // ✅ 수정4차: 관리자만 실행 가능(보안)
   // ============================================================
   Future<void> _sendPasswordResetEmail() async {
+    if (!_isAdmin) {
+      _showSnack('권한이 없습니다.');
+      return;
+    }
+
     final email = _emailController.text.trim();
     if (email.isEmpty) {
       _showSnack('이메일이 비어있습니다.');
@@ -229,8 +224,6 @@ class _UserEditScreenWebState extends State<UserEditScreenWeb> {
     _nameController.dispose();
     _phoneController.dispose();
     _managerColorController.dispose();
-    _newPasswordController.dispose();
-    _newPasswordConfirmController.dispose();
     super.dispose();
   }
 
@@ -238,7 +231,6 @@ class _UserEditScreenWebState extends State<UserEditScreenWeb> {
   Widget build(BuildContext context) {
     if (_loading) return const Center(child: CircularProgressIndicator());
 
-    // ✅ 레이아웃 유지: 기존 구조 그대로 (정렬/배치 변경 없음)
     return Padding(
       padding: const EdgeInsets.all(24),
       child: Align(
@@ -246,7 +238,6 @@ class _UserEditScreenWebState extends State<UserEditScreenWeb> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 상단 타이틀 + 목록으로
             Row(
               children: [
                 const Text('사용자 편집', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
@@ -308,7 +299,6 @@ class _UserEditScreenWebState extends State<UserEditScreenWeb> {
                               (v) => setState(() => _workLogType = v),
                         ),
 
-                        // 입력 영역(기존 배치 유지)
                         Row(
                           children: [
                             Expanded(
@@ -373,31 +363,8 @@ class _UserEditScreenWebState extends State<UserEditScreenWeb> {
                           ],
                         ),
 
-                        // (기존 비밀번호 입력칸은 유지 — 단, 직접 변경 기능은 사용하지 않음)
-                        const SizedBox(height: 12),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: TextField(
-                                controller: _newPasswordController,
-                                obscureText: true,
-                                decoration: const InputDecoration(labelText: '비밀번호 변경(사용 안 함)'),
-                              ),
-                            ),
-                            const SizedBox(width: 16),
-                            Expanded(
-                              child: TextField(
-                                controller: _newPasswordConfirmController,
-                                obscureText: true,
-                                decoration: const InputDecoration(labelText: '비밀번호 확인(사용 안 함)'),
-                              ),
-                            ),
-                          ],
-                        ),
-
                         const SizedBox(height: 18),
 
-                        // 근무여부 토글(기존 유지)
                         Row(
                           children: [
                             const Text('근무여부', style: TextStyle(fontWeight: FontWeight.bold)),
@@ -412,7 +379,6 @@ class _UserEditScreenWebState extends State<UserEditScreenWeb> {
 
                         const SizedBox(height: 22),
 
-                        // 하단 버튼(기존 위치 유지 + reset 버튼만 추가)
                         Row(
                           children: [
                             const Spacer(),
@@ -422,12 +388,16 @@ class _UserEditScreenWebState extends State<UserEditScreenWeb> {
                               child: const Text('목록으로'),
                             ),
                             const SizedBox(width: 10),
-                            ElevatedButton(
-                              style: _greyPurpleBtn(),
-                              onPressed: _sendPasswordResetEmail,
-                              child: const Text('비밀번호 재설정 메일'),
-                            ),
-                            const SizedBox(width: 10),
+
+                            if (_isAdmin) ...[
+                              ElevatedButton(
+                                style: _greyPurpleBtn(),
+                                onPressed: _sendPasswordResetEmail,
+                                child: const Text('비밀번호 재설정 메일'),
+                              ),
+                              const SizedBox(width: 10),
+                            ],
+
                             ElevatedButton(
                               style: _greyPurpleBtn(),
                               onPressed: _save,
