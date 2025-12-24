@@ -332,6 +332,11 @@ class _HomeScreenWebState extends State<HomeScreenWeb> {
     switch (_selectedIndex) {
       case 0:
         return _buildReceptionContent();
+
+    // ✅ 수정1차: 통합일정 연결 (menu index = 4)
+      case 4:
+        return const ScheduleScreenWeb();
+
       default:
         final safe = (_selectedIndex >= 0 && _selectedIndex < _menuItems.length) ? _menuItems[_selectedIndex] : '';
         return Center(child: Text(safe));
